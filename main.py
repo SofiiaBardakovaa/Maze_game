@@ -7,6 +7,7 @@
 from __future__ import annotations
 from collections import deque
 import heapq
+import math
 
 
 # Here we declare some constants, a type Position and custom exception to make code cleaner and
@@ -82,14 +83,22 @@ class Maze:
         return None
 
 
-    # This method is used to get the neighbours of the current node for 4-directional movement
+    # This method is used to get the neighbours of the current node for 4-directional and 8-directional
+    # movement (depends on the value of parameter allow_diagonals)
     # First, we calculate all possible position of neighbours and then check if they are in the boundaries
     # of the maze and if a neighbour is not an obstacle
 
-    def get_neighbors(self, position: Position) -> list[Position]:
+    def get_neighbors(self, position: Position, allow_diagonals: bool) -> list[Position]:
         row, column = position
         rows, cols = len(self.graph), len(self.graph[0])
         possible_moves = [(row, column - 1), (row, column + 1), (row - 1, column), (row + 1, column)]
+        if allow_diagonals:
+            possible_moves.extend(
+                [
+                    (row - 1, column - 1), (row - 1, column + 1),
+                    (row + 1, column - 1), (row + 1, column + 1)
+                ]
+            )
         return [
             (row, col) for row, col in possible_moves
             if 0 <= row < rows and 0 <= col < cols and self.graph[row][col] != OBSTACLE_VALUE
@@ -116,17 +125,17 @@ class Maze:
     # E is the number of edges
     # The space complexity of the algorithm is O(V).
 
-    def subtask_a(self):
-        num_of_moves, path = self.breadth_first_search()
+    def subtask_a(self, allow_diagonals : bool = False):
+        num_of_moves, path = self.breadth_first_search(allow_diagonals)
         print("Subtask A")
         print(f"Minimum number of moves: {num_of_moves}")
         print(f"Path from S to G: {path}")
-        print("Movement mode used: 4-directional movement")
+        print(f"Movement mode used: {'8-directional movement' if allow_diagonals else '4-directional movement'}")
 
 
     # This method is used to find the path with the smallest number of steps
 
-    def breadth_first_search(self):
+    def breadth_first_search(self, allow_diagonals : bool = False):
         # we start with searching for start and goal position in the maze
         # find_position can return None if nothing is found, but we don't check for this condition
         # because the task states that "The maze contains exactly one S", so we assume that it exists
@@ -155,7 +164,7 @@ class Maze:
                 return current_node.g, self.build_path(current_node)
 
             # otherwise, we take all the neighbours of the current node and for each of them:
-            for neighbour_position in self.get_neighbors(current_node.position):
+            for neighbour_position in self.get_neighbors(current_node.position, allow_diagonals):
 
                 # if neighbours has not been visited, we create an object of this node. We assign position,
                 # g is equal to the distance from the start to the current node + 1, and parent is current node
@@ -173,30 +182,30 @@ class Maze:
     # We assume that the cost of moving from cell u to cell v is the value of cell u (Leaving Cost)
     # For solving the task we are using A* algorithm because it's more efficient than Dijkstra's with a
     # good heuristic
-    # Heuristic we are using is manhattan distance because it is commonly used in 2D mazes as it matches
-    # how movement works in grid-based environments (4-direction)
+    # Heuristic we are using is euclidian distance because it is commonly used in 2D mazes as it matches
+    # how movement works (4 8-directional and 8-directional)
     # Time and space complexity: O(b^d), where b is branching factor and d is depth of the optimal path
 
-    def subtask_b(self):
-        path_value, path = self.minimum_cost_path()
+    def subtask_b(self, allow_diagonals : bool = False):
+        path_value, path = self.minimum_cost_path(allow_diagonals)
         print("Subtask B")
         print(f"Minimum total cost: {path_value}")
         print(f"Path from S to G: {path}")
         print("Cost model used: Leaving Cost")
-        print("Movement mode used: 4-directional movement")
+        print(f"Movement mode used: {'8-directional movement' if allow_diagonals else '4-directional movement'}")
 
 
-    # This method is used to calculate manhattan distance for heuristic. It uses a standard math formula
+    # This method is used to calculate euclidian distance for heuristic. It uses a standard math formula
 
-    def calculate_manhhatan_distance(self, pos1: Position, pos2: Position) -> float:
+    def calculate_euclidean_distance(self, pos1: Position, pos2: Position) -> float:
         row1, col1 = pos1
         row2, col2 = pos2
-        return abs(row1 - row2) + abs(col1 - col2)
+        return math.sqrt((row1 - row2) ** 2 + (col1 - col2) ** 2)
 
 
     # This is the main function for subtask b (looking for minimum cost path)
 
-    def minimum_cost_path(self):
+    def minimum_cost_path(self, allow_diagonals : bool = False):
         # we start with searching for start and goal position in the maze
         # find_position can return None if nothing is found, but we don't check for this condition
         # because the task states that "The maze contains exactly one S", so we assume that it exists
@@ -206,7 +215,7 @@ class Maze:
         # We take the start cell of a maze and create an instance of a GraphNode. We assign position,
         # distance from start to the node (which is 0) and we calculate heuristic (distance from the
         # start to the goal)
-        start_node = GraphNode(position=start_pos, g=0, h=self.calculate_manhhatan_distance(start_pos, goal_pos))
+        start_node = GraphNode(position=start_pos, g=0, h=self.calculate_euclidean_distance(start_pos, goal_pos))
 
         # We initialize open list and dict - they will keep track of nodes which we have to visit
         # We have 2 data structures so that it is more convenient to work
@@ -246,7 +255,7 @@ class Maze:
             closed_set.add(current_pos)
 
             # then we take all the neighbours of the current node and for each of them:
-            for neighbor_pos in self.get_neighbors(current_pos):
+            for neighbor_pos in self.get_neighbors(current_pos, allow_diagonals):
 
                 # if neighbour has already been examined we move to the next one
                 if neighbor_pos in closed_set:
@@ -263,7 +272,7 @@ class Maze:
                     neighbor = GraphNode(
                         position=neighbor_pos,
                         g=node_g,
-                        h=self.calculate_manhhatan_distance(neighbor_pos, goal_pos),
+                        h=self.calculate_euclidean_distance(neighbor_pos, goal_pos),
                         parent=current_node
                     )
                     heapq.heappush(open_list, (neighbor.f, neighbor.position))
@@ -281,7 +290,32 @@ class Maze:
         return path_value, []
 
 
+    # Here we call functions for subtasks a and b and print the results
+    # Difference is that in some calls diagonal movement is allowed, in others it is not
+    # Allowing diagonal moves change the shortest path because instead of 2 moves we make only one, also
+    # diagonal moves open new paths for us, which potentially can be shorter
+    # Allowing diagonal moves change the cheapest path because they might help us avoid expensive cells,
+    # reach cheap regions faster and reduce total leaving costs
+    # The path with the fewest moves can be different from the path with the lowest cost because it can
+    # take only 2 moves for us to get to the goal but its cost will be 100, and it can take 15 moves to
+    # get to the same goal, but cost will be much smaller
+    # Time and space complexity for subtask a and b stay the same
+
+    def subtask_c(self):
+        print("Subtask C")
+        print()
+        self.subtask_a(allow_diagonals=False)
+        print()
+        self.subtask_a(allow_diagonals=True)
+        print()
+        self.subtask_b(allow_diagonals=False)
+        print()
+        self.subtask_b(allow_diagonals=True)
+
+
 maze = Maze("maze_10x10_A.txt")
 maze.subtask_a()
 print()
 maze.subtask_b()
+print()
+maze.subtask_c()
