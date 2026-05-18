@@ -5,6 +5,7 @@
 
 
 from __future__ import annotations
+from collections import deque
 import heapq
 
 
@@ -23,7 +24,7 @@ class EmptyFileError(Exception):
         super().__init__(message)
 
 
-# This class is used in subtask B. It contains all the necessary information about the "node" in the
+# This class is used in subtask A and B. It contains all the necessary information about the "node" in the
 # graph/maze. Position determines row and column of the node, g is the cost from the start to
 # the node, h is heuristic value which is estimated value to the goal from the node, f is the total
 # estimated value (g+h), and parent is the parent node of the current node
@@ -95,6 +96,79 @@ class Maze:
         ]
 
 
+    # This method is used to build a path. It starts from the goal node, then takes its parent and
+    # continues until the path is not fully explored (node becomes None, because the parent of start
+    # node is None by default)
+
+    def build_path(self, goal_node: GraphNode) -> str:
+        path = []
+        current = goal_node
+        while current is not None:
+            path.append(current.position)
+            current = current.parent
+        return " -> ".join(str(pos) for pos in path[::-1])
+
+
+    # Here we call function for subtask a and print the results
+    # For solving the task we are using depth first search because it explores nodes level by level and
+    # the first time we reach G, it is guaranteed that we have used the fewest moves.
+    # Time complexity is O(V + E), where v is the number of vertices (row * column) and
+    # E is the number of edges
+    # The space complexity of the algorithm is O(V).
+
+    def subtask_a(self):
+        num_of_moves, path = self.breadth_first_search()
+        print("Subtask A")
+        print(f"Minimum number of moves: {num_of_moves}")
+        print(f"Path from S to G: {path}")
+        print("Movement mode used: 4-directional movement")
+
+
+    # This method is used to find the path with the smallest number of steps
+
+    def breadth_first_search(self):
+        # we start with searching for start and goal position in the maze
+        # find_position can return None if nothing is found, but we don't check for this condition
+        # because the task states that "The maze contains exactly one S", so we assume that it exists
+        start_pos = self.find_position(START_VALUE)
+        goal_pos = self.find_position(GOAL_VALUE)
+
+        # We take the start cell of a maze and create an instance of a GraphNode. We assign position,
+        # distance from start to the node (which is 0) and parent is None
+        start_node = GraphNode(position=start_pos, g=0, parent=None)
+
+        # visited data structure is a set that stores all the nodes we have already visited (we store
+        # positions)
+        visited = set(start_pos)
+
+        # we will add node objects to the queue to store them layer by layer and then explore
+        queue = deque([start_node])
+
+        # while there are nodes to be explored
+        while queue:
+            # we take the first added node from the queue
+            current_node = queue.popleft()
+
+            # if its position is equal to the position of goal node we stop exploring and return distance
+            # from the start to the goal and build the path
+            if current_node.position == goal_pos:
+                return current_node.g, self.build_path(current_node)
+
+            # otherwise, we take all the neighbours of the current node and for each of them:
+            for neighbour_position in self.get_neighbors(current_node.position):
+
+                # if neighbours has not been visited, we create an object of this node. We assign position,
+                # g is equal to the distance from the start to the current node + 1, and parent is current node
+                # we add position to the visited set and object to the queue
+                if neighbour_position not in visited:
+                    neighbour = GraphNode(position=neighbour_position, g=current_node.g + 1, parent=current_node)
+                    visited.add(neighbour_position)
+                    queue.append(neighbour)
+
+        # if there is no path we return empty values
+        return 0, []
+
+
     # Here we call function for subtask b and print the results
     # We assume that the cost of moving from cell u to cell v is the value of cell u (Leaving Cost)
     # For solving the task we are using A* algorithm because it's more efficient than Dijkstra's with a
@@ -105,6 +179,7 @@ class Maze:
 
     def subtask_b(self):
         path_value, path = self.minimum_cost_path()
+        print("Subtask B")
         print(f"Minimum total cost: {path_value}")
         print(f"Path from S to G: {path}")
         print("Cost model used: Leaving Cost")
@@ -117,19 +192,6 @@ class Maze:
         row1, col1 = pos1
         row2, col2 = pos2
         return abs(row1 - row2) + abs(col1 - col2)
-
-
-    # This method is used to build a path. It starts from the goal node, then takes its parent and
-    # continues until the path is not fully explored (node becomes None, because the parent of start
-    # node is None by default)
-
-    def build_path(self, goal_node: GraphNode) -> str:
-        path = []
-        current = goal_node
-        while current is not None:
-            path.append(current.position)
-            current = current.parent
-        return " -> ".join(str(pos) for pos in path[::-1])
 
 
     # This is the main function for subtask b (looking for minimum cost path)
@@ -220,4 +282,6 @@ class Maze:
 
 
 maze = Maze("maze_10x10_A.txt")
+maze.subtask_a()
+print()
 maze.subtask_b()
