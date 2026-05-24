@@ -624,6 +624,157 @@ class Maze:
 
 
 
+    # Here we call function for subtask e and print results.
+    #
+    # We use Prim's algorithm to compute minimum spanning tree.
+    #
+    # Time complexity: O(E log V)
+    # Space complexity: O(V + E)
+
+    def subtask_e(self, allow_diagonals=False):
+        (
+            total_weight,
+            vertex_count,
+            edge_count,
+            mst_edges,
+            goal_reachable
+        ) = self.minimum_spanning_tree(allow_diagonals)
+
+        print("Subtask E")
+
+        print(f"Total MST weight: {total_weight}")
+
+        print(f"Number of vertices: {vertex_count}")
+
+        print(f"Number of edges in tree: {edge_count}")
+
+        print("Tree edges:")
+
+        for u, v, weight in mst_edges:
+            print(f"{u} -> {v}: {weight}")
+
+        print(
+            f"Movement mode used: "
+            f"{'8-directional movement' if allow_diagonals else '4-directional movement'}"
+        )
+
+        print(f"G reachable from S: {goal_reachable}")
+
+    # This method builds undirected weighted graph for subtask e.
+    # Every non-wall cell is treated as vertex.
+    # Edges connect neighbouring cells.
+    #
+    # Weight rule:
+    # weight(u, v) = value(u) + value(v)
+    #
+    # value(S) = 0
+    # value(G) = 0
+
+    def build_weighted_graph(self, allow_diagonals=False):
+
+        graph = {}
+
+        rows = len(self.graph)
+        cols = len(self.graph[0])
+
+        # Go through all maze cells
+        for row in range(rows):
+            for col in range(cols):
+
+                # Walls are not vertices
+                if self.graph[row][col] == OBSTACLE_VALUE:
+                    continue
+
+                current = (row, col)
+
+                # Create adjacency list
+                graph[current] = []
+
+                # Get neighbours
+                for neighbor in self.get_neighbors(current, allow_diagonals):
+                    # Weight = value(current) + value(neighbor)
+                    weight = (
+                            self.get_cell_value(current)
+                            + self.get_cell_value(neighbor)
+                    )
+
+                    graph[current].append((neighbor, weight))
+
+        return graph
+
+    # This method is used to compute minimum spanning tree
+    # using Prim's algorithm.
+    #
+    # Prim's algorithm always chooses edge with minimum weight
+    # which connects visited and unvisited vertices.
+    #
+    # Cycles are avoided because we only add edges
+    # leading to unvisited vertices.
+
+    def minimum_spanning_tree(self, allow_diagonals=False):
+
+        graph = self.build_weighted_graph(allow_diagonals)
+
+        start = self.find_position(START_VALUE)
+        goal = self.find_position(GOAL_VALUE)
+
+        visited = set()
+
+        mst_edges = []
+
+        total_weight = 0
+
+        # Priority queue stores:
+        # (weight, from_vertex, to_vertex)
+        priority_queue = []
+
+        # Start vertex becomes visited
+        visited.add(start)
+
+        # Add all start neighbours into heap
+        for neighbor, weight in graph[start]:
+            heapq.heappush(
+                priority_queue,
+                (weight, start, neighbor)
+            )
+
+        # Main Prim's loop
+        while priority_queue:
+
+            weight, u, v = heapq.heappop(priority_queue)
+
+            # Skip visited vertices to avoid cycles
+            if v in visited:
+                continue
+
+            # Add new vertex into MST
+            visited.add(v)
+
+            # Add edge into MST
+            mst_edges.append((u, v, weight))
+
+            # Increase total weight
+            total_weight += weight
+
+            # Add new edges into heap
+            for neighbor, edge_weight in graph[v]:
+
+                if neighbor not in visited:
+                    heapq.heappush(
+                        priority_queue,
+                        (edge_weight, v, neighbor)
+                    )
+
+        # Goal reachable if it belongs to visited component
+        goal_reachable = goal in visited
+
+        return (
+            total_weight,
+            len(visited),
+            len(mst_edges),
+            mst_edges,
+            goal_reachable
+        )
 
 maze = Maze("maze_10x10_A.txt")
 maze.subtask_a()
@@ -633,3 +784,5 @@ print()
 maze.subtask_c()
 print()
 maze.subtask_d()
+print()
+maze.subtask_e()
