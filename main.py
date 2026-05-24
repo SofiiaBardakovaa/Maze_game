@@ -1,5 +1,5 @@
 # Kateryna Fedkova   ID: 260ADB019  GROUP: ADBD0
-# TODO fill your info
+# Sofiia Bardakova ID: 260ADB020
 # Programming language: Python
 # To run the program: go into the folder which contains main.py and run "python main.py" in the terminal
 
@@ -148,7 +148,7 @@ class Maze:
 
         # visited data structure is a set that stores all the nodes we have already visited (we store
         # positions)
-        visited = set(start_pos)
+        visited = {start_pos}
 
         # we will add node objects to the queue to store them layer by layer and then explore
         queue = deque([start_node])
@@ -313,9 +313,323 @@ class Maze:
         self.subtask_b(allow_diagonals=True)
 
 
+    # Here we call function for subtask D and print the results
+    # For solving the task we are using Edmonds-Karp algorithm
+    # Edmonds-Karp is an implementation of Ford-Fulkerson algorithm which uses Breadth-First Search
+    # to find augmenting paths in the residual graph.
+    #
+    # Every non-wall cell is treated as a vertex in this subtask. Directed edges are created between
+    # neighbouring cells. Capacity(u, v) = value(v), Capacities into S and G are set to 100.
+    #
+    # This algorithm repeatedly 1) finds a path from G to S using BFS, 2) finds the minimum residual
+    # capacity on this path (bottleneck), 3) increase total flow by this bottleneck value, 4) update residual capacity.
+    #
+    # Time complexity: O(V*(E**2)), where V is the number of vertices and E is the number of edges.
+    # Explanation: Breadth first search works in O(V + E). In graphs E is usually larger than V, so BFS becomes O(E).
+    # Edmonds-Karp may run BFS up to O(VE) times. Therefore total complexity becomes:
+    # O(VE) * O(E) = O(V*(E**2))
+    #
+    # Space complexity: O(V + E)
+
+    def subtask_d(self, allow_diagonals=False):
+
+        # We call maximum_flow method which returns
+        # maximum flow value, graph with final positive flows, original graph with capacities
+        max_flow, flow_graph, original_graph = self.maximum_flow(allow_diagonals)
+
+        print("Subtask D")
+        print(f"Maximum flow value from G to S: {max_flow}")
+
+        print("Positive flow edges:")
+
+        # We go through all edges in the flow graph
+        # and print only edges with positive flow
+        for u in flow_graph:
+            for v, flow in flow_graph[u].items():
+
+                if flow > 0:
+                    capacity = self.build_flow_graph(
+                        allow_diagonals
+                    )[u][v]
+
+                    print(f"{u} -> {v}: {flow}/{capacity}")
+
+        print(
+            f"Movement mode used: "
+            f"{'8-directional movement' if allow_diagonals else '4-directional movement'}"
+        )
+
+    # This method is used to get numeric value of a maze cell.
+    # We need it when building capacities for the flow network.
+    #
+    # First, we get row and column from the position tuple.
+    # Then we take the character stored in the maze at this position.
+    #
+    # If the cell is S or G, we return 0.
+    # Otherwise, digit characters are converted into integers.
+
+    def get_cell_value(self, position: Position) -> int:
+        row, col = position
+        value = self.graph[row][col]
+
+        if value in (START_VALUE, GOAL_VALUE):
+            return 0
+
+        return int(value)
+
+
+    # This method is used to build a graph for subtask d (maximum flow)
+    # We represent the maze as directed graph where every non-wall cell is a vertex
+    # and edges connect neighbouring cells
+    #
+    # We use adjacency list representation because each cell has only few neighbours,
+    # so it is memory efficient
+
+    def build_flow_graph(self, allow_diagonals=False):
+        # Graph is stored as adjacency list.
+        # For every vertex we store neighbours and capacities.
+        graph = {}
+
+        # Get maze dimensions
+        rows = len(self.graph)
+        cols = len(self.graph[0])
+
+        # Go through all cells of the maze.
+        # We examine every possible position.
+        for row in range(rows):
+            for col in range(cols):
+
+                # Walls are not part of the graph
+                if self.graph[row][col] == OBSTACLE_VALUE:
+                    continue
+
+                # Current cell becomes graph vertex
+                current = (row, col)
+
+                # Create adjacency list for current vertex
+                graph[current] = {}
+
+                # Get all valid neighbouring cells.
+                # Depending on movement mode this includes: 4-directional neighbours or 8-directional neighbours
+                for neighbor in self.get_neighbors(current, allow_diagonals):
+
+                    # Get neighbour coordinates
+                    nr, nc = neighbor
+
+                    # Get value stored in neighbour cell
+                    neighbor_value = self.graph[nr][nc]
+
+                    # Capacities into S and G are set to 100
+                    if neighbor_value in (START_VALUE, GOAL_VALUE):
+                        capacity = 100
+
+                    # Otherwise capacity equals value of destination cell
+                    else:
+                        capacity = int(neighbor_value)
+
+                    # Add directed edge with its capacity
+                    # from current vertex to neighbour vertex
+                    graph[current][neighbor] = capacity
+
+        # Return complete flow network
+        return graph
+
+    # This method is used in Edmonds-Karp algorithm to find augmenting path
+    # in the residual graph using breadth first search.
+    # We use BFS because Edmonds-Karp always searches shortest augmenting paths
+    # by number of edges.
+
+    def bfs_flow(self, residual_graph, source, sink, parent):
+
+        # Visited set is used to avoid revisiting vertices
+        visited = set()
+
+        # Queue is used for breadth first search traversal
+        queue = deque([source])
+
+        # We mark source node as visited
+        # because BFS starts from this vertex
+        visited.add(source)
+
+        # Main BFS loop.
+        # Continue while there are vertices left to explore.
+
+        while queue:
+            # Take first added vertex from the queue.
+            # BFS explores graph level by level.
+            current = queue.popleft()
+
+            # Explore all neighbours of current vertex.
+            # We also get residual capacity of every edge.
+            for neighbor, capacity in residual_graph[current].items():
+
+                # We only visit vertices which were not visited before and have positive residual capacity
+                if neighbor not in visited and capacity > 0:
+                    visited.add(neighbor)
+
+                    # Save parent to reconstruct path
+                    parent[neighbor] = current
+
+                    # If sink is reached, augmenting path exists
+                    if neighbor == sink:
+                        return True
+
+                    # Add neighbour to queue for further exploration
+                    queue.append(neighbor)
+
+        # If BFS finishes without reaching sink,
+        # augmenting path does not exist anymore.
+        return False
+
+
+    # This method is used to solve subtask d (maximum flow)
+    # We use Edmonds-Karp algorithm because it is a standard algorithm
+    # for finding maximum flow in directed graphs.
+    # It repeatedly searches for augmenting paths using breadth first search.
+
+    def maximum_flow(self, allow_diagonals=False):
+
+        # In this subtask G is source and S is sink
+        source = self.find_position(GOAL_VALUE)
+        sink = self.find_position(START_VALUE)
+
+        # Then we build original flow graph from the maze.
+        # This graph stores all directed edges and their capacities.
+
+        graph = self.build_flow_graph(allow_diagonals)
+
+        # Residual graph is needed for Edmonds-Karp algorithm.
+        # It stores remaining capacities after sending flow through edges.
+
+        residual_graph = {}
+
+        # Here we initialize residual graph.
+        # Initially residual capacities are equal to original capacities
+        # because no flow has been sent yet.
+
+        for u in graph:
+
+            # Create adjacency list for current vertex
+            residual_graph[u] = {}
+
+            # Go through all neighbours of current vertex
+            for v in graph[u]:
+
+                # Copy original capacities into residual graph
+                residual_graph[u][v] = graph[u][v]
+
+
+        # Edmonds-Karp algorithm also needs reverse edges.
+        # Reverse edges allow the algorithm to redistribute flow later
+        # if a better augmenting path is found
+
+        for u in graph:
+
+            # Go through all neighbours
+            for v in graph[u]:
+
+                # If neighbour is not yet in residual graph
+                if v not in residual_graph:
+
+                    # Create empty adjacency list
+                    residual_graph[v] = {}
+
+                # If reverse edge does not exist
+                if u not in residual_graph[v]:
+
+                    # Reverse edge initially has capacity 0
+                    residual_graph[v][u] = 0
+
+        # Variable which stores final maximum flow
+        max_flow = 0
+
+        # Graph which stores final positive flows
+        flow_graph = {}
+
+        # Initialize all flows with value 0
+
+        for u in graph:
+
+            # Create adjacency list for current vertex
+            flow_graph[u] = {}
+
+            # Go through all neighbours
+            for v in graph[u]:
+
+                # Initially all flows are 0
+                flow_graph[u][v] = 0
+
+        # Main Edmonds-Karp loop.
+        # We repeatedly search for augmenting paths until none exist.
+
+        while True:
+
+            # Parent dictionary is used to reconstruct augmenting path
+            parent = {}
+
+            # Use BFS to search augmenting path in residual graph.
+            # If no path exists algorithm stops.
+            if not self.bfs_flow(residual_graph, source, sink, parent):
+                break
+
+            # path_flow stores bottleneck capacity of augmenting path.
+            # We initialize it with infinity because we will search
+            # for minimum edge capacity on the path.
+
+            path_flow = float('inf')
+
+            # Start from sink vertex
+            current = sink
+
+            # Traverse augmenting path backwards until source is reached
+
+            while current != source:
+
+                # Get parent of current vertex
+                previous = parent[current]
+
+                # Update bottleneck capacity
+                path_flow = min(path_flow,
+                                residual_graph[previous][current])
+
+                # Move to previous vertex
+                current = previous
+
+            # Add bottleneck value to total maximum flow
+            max_flow += path_flow
+
+            # Start again from sink
+            current = sink
+
+            # Update residual capacities and flow graph
+            # Traverse path backwards again
+            while current != source:
+                # Get parent vertex
+                previous = parent[current]
+
+                # Reduce residual capacity of forward edge
+                residual_graph[previous][current] -= path_flow
+
+                # Increase residual capacity of reverse edge
+                residual_graph[current][previous] += path_flow
+
+                # Add flow to final flow graph
+                flow_graph[previous][current] += path_flow
+
+                # Move to previous vertex
+                current = previous
+
+        # Return maximum flow, final flow graph and original graph
+        return max_flow, flow_graph, graph
+
+
+
+
 maze = Maze("maze_10x10_A.txt")
 maze.subtask_a()
 print()
 maze.subtask_b()
 print()
 maze.subtask_c()
+print()
+maze.subtask_d()
