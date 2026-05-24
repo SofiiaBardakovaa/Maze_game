@@ -629,7 +629,7 @@ class Maze:
     #
     # We use Prim's algorithm to compute minimum spanning tree.
     #
-    # Time complexity: O(E log V)
+    # Time complexity: O(E log V), where V is the number of vertices and E is the number of edges.
     # Space complexity: O(V + E)
 
     def subtask_e(self, allow_diagonals=False):
