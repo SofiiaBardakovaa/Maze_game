@@ -2,12 +2,13 @@
 # Sofiia Bardakova ID: 260ADB020
 # Programming language: Python
 # To run the program: go into the folder which contains main.py and run "python main.py" in the terminal
-
+# Command-line options are added for selecting tasks, cost models, and movement modes.
 
 from __future__ import annotations
 from collections import deque
 import heapq
 import math
+import sys
 
 
 # Here we declare some constants, a type Position and custom exception to make code cleaner and
@@ -667,17 +668,20 @@ class Maze:
     # Weight rule:
     # weight(u, v) = value(u) + value(v)
     #
-    # value(S) = 0
-    # value(G) = 0
+    # We use adjacency list representation because each cell
+    # has only few neighbours, therefore adjacency list
+    # is memory efficient.
 
     def build_weighted_graph(self, allow_diagonals=False):
-
+        # Dictionary is used as adjacency list representation.
         graph = {}
 
+        # Get maze dimensions
         rows = len(self.graph)
         cols = len(self.graph[0])
 
         # Go through all maze cells
+        # Every valid cell may become graph vertex
         for row in range(rows):
             for col in range(cols):
 
@@ -685,65 +689,88 @@ class Maze:
                 if self.graph[row][col] == OBSTACLE_VALUE:
                     continue
 
+                # Current maze cell becomes graph vertex
                 current = (row, col)
 
                 # Create adjacency list
                 graph[current] = []
 
-                # Get neighbours
+                # Get all neighbouring cells.
+                # Depending on movement mode neighbours can be 4-directional or 8-directional
+
                 for neighbor in self.get_neighbors(current, allow_diagonals):
+
                     # Weight = value(current) + value(neighbor)
                     weight = (
                             self.get_cell_value(current)
                             + self.get_cell_value(neighbor)
                     )
-
+                    # Add neighbour and edge weight
+                    # into adjacency list
                     graph[current].append((neighbor, weight))
 
+        # Return completed weighted graph
         return graph
 
     # This method is used to compute minimum spanning tree
-    # using Prim's algorithm.
+    # for subtask e using Prim's algorithm.
     #
-    # Prim's algorithm always chooses edge with minimum weight
+    # Prim's algorithm always chooses minimum weight edge
     # which connects visited and unvisited vertices.
     #
-    # Cycles are avoided because we only add edges
-    # leading to unvisited vertices.
+    # Cycles are avoided because we never add edges
+    # leading to already visited vertices.
+    #
+    # The algorithm only explores connected component
+    # containing S, which matches task requirements.
 
     def minimum_spanning_tree(self, allow_diagonals=False):
 
+        # Build weighted graph from the maze
         graph = self.build_weighted_graph(allow_diagonals)
 
+        # Find start and goal positions
         start = self.find_position(START_VALUE)
         goal = self.find_position(GOAL_VALUE)
 
+        # Visited set stores vertices already included into MST
         visited = set()
 
+        # List of edges included into minimum spanning tree
         mst_edges = []
 
+        # Variable storing total weight of MST
         total_weight = 0
 
-        # Priority queue stores:
+        # Priority queue is used to always select
+        # edge with minimum weight.
+        #
+        # Heap format:
         # (weight, from_vertex, to_vertex)
+
         priority_queue = []
 
-        # Start vertex becomes visited
+        # Prim's algorithm starts from start vertex
         visited.add(start)
 
-        # Add all start neighbours into heap
+        # Initially we add all edges from start vertex into heap.
+        # Heap automatically keeps smallest edge on top.
         for neighbor, weight in graph[start]:
             heapq.heappush(
                 priority_queue,
                 (weight, start, neighbor)
             )
 
-        # Main Prim's loop
+        # Main Prim's algorithm loop.
+        # Continue while there are candidate edges in heap.
         while priority_queue:
 
+            # Take edge with minimum weight
             weight, u, v = heapq.heappop(priority_queue)
 
-            # Skip visited vertices to avoid cycles
+            # If destination vertex was already visited,
+            # adding this edge would create cycle,
+            # therefore we skip it.
             if v in visited:
                 continue
 
@@ -756,7 +783,8 @@ class Maze:
             # Increase total weight
             total_weight += weight
 
-            # Add new edges into heap
+            # Add all outgoing edges from new vertex into heap.
+            # Only edges leading to unvisited vertices are useful.
             for neighbor, edge_weight in graph[v]:
 
                 if neighbor not in visited:
@@ -765,7 +793,8 @@ class Maze:
                         (edge_weight, v, neighbor)
                     )
 
-        # Goal reachable if it belongs to visited component
+        # Goal is reachable if it belongs
+        # to connected component containing S
         goal_reachable = goal in visited
 
         return (
@@ -776,13 +805,95 @@ class Maze:
             goal_reachable
         )
 
-maze = Maze("maze_10x10_A.txt")
-maze.subtask_a()
-print()
-maze.subtask_b()
-print()
-maze.subtask_c()
-print()
-maze.subtask_d()
-print()
-maze.subtask_e()
+# Interactive menu for running subtasks.
+# Program asks user which subtask and movement mode should be used.
+
+if __name__ == "__main__":
+
+    # Default maze file
+    filename = "maze_10x10_A.txt"
+
+    # Create maze object
+    maze = Maze(filename)
+
+    # Main program loop
+    # Program continues until user chooses to stop
+
+    while True:
+
+        print("Maze Graph Algorithms")
+        print()
+
+        # Ask user which subtask should be executed
+        print("Choose subtask:")
+        print("A - Shortest Path")
+        print("B - Minimum Cost Path")
+        print("C - Movement Comparison")
+        print("D - Maximum Flow")
+        print("E - Minimum Spanning Tree")
+        print("ALL - Run all subtasks")
+
+        task = input("Enter task: ").upper()
+
+        # Ask user for movement mode
+        print()
+        print("Choose movement mode:")
+        print("4 - 4-directional movement")
+        print("8 - 8-directional movement")
+
+        movement = input("Enter movement mode: ")
+
+        # Enable diagonals only for mode 8
+        allow_diagonals = movement == "8"
+
+        print()
+
+        # Execute selected subtask
+
+        if task == "A":
+            maze.subtask_a(allow_diagonals)
+
+        elif task == "B":
+            maze.subtask_b(allow_diagonals)
+
+        elif task == "C":
+            maze.subtask_c()
+
+        elif task == "D":
+            maze.subtask_d(allow_diagonals)
+
+        elif task == "E":
+            maze.subtask_e(allow_diagonals)
+
+        elif task == "ALL":
+
+            maze.subtask_a(allow_diagonals)
+            print()
+
+            maze.subtask_b(allow_diagonals)
+            print()
+
+            maze.subtask_c()
+            print()
+
+            maze.subtask_d(allow_diagonals)
+            print()
+
+            maze.subtask_e(allow_diagonals)
+
+        else:
+            print("Unknown task")
+
+        # Ask user if program should continue
+        print()
+
+        continue_program = input(
+            "Do you want to continue? (yes/no): "
+        ).lower()
+
+        # Stop program if user enters no
+        if continue_program != "yes":
+            print("Program finished")
+            break
+
+        print()
