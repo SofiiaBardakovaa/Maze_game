@@ -814,7 +814,7 @@ class Maze:
 if __name__ == "__main__":
 
     # Default maze file
-    filename = "maze_10x10_A.txt"
+    filename = "maze_100x100.txt"
 
     # Create maze object
     maze = Maze(filename)
@@ -838,16 +838,24 @@ if __name__ == "__main__":
 
         task = input("Enter task: ").upper()
 
-        # Ask user for movement mode
-        print()
-        print("Choose movement mode:")
-        print("4 - 4-directional movement")
-        print("8 - 8-directional movement")
+        # Subtask C already compares both movement modes,
+        # therefore movement mode should not be asked
 
-        movement = input("Enter movement mode: ")
+        if task != "C":
 
-        # Enable diagonals only for mode 8
-        allow_diagonals = movement == "8"
+            # Ask user for movement mode
+            print()
+            print("Choose movement mode:")
+            print("4 - 4-directional movement")
+            print("8 - 8-directional movement")
+
+            movement = input("Enter movement mode: ")
+
+            # Enable diagonals only for mode 8
+            allow_diagonals = movement == "8"
+
+        else:
+            allow_diagonals = False
 
         print()
 
