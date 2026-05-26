@@ -133,7 +133,7 @@ class Maze:
         print(f"Path from S to G: {path}")
         print(f"Movement mode used: {'8-directional movement' if allow_diagonals else '4-directional movement'}")
 
-
+    #Idea for Breadth First Search was adapted from: https://www.geeksforgeeks.org/dsa/breadth-first-search-or-bfs-for-a-graph/
     # This method is used to find the path with the smallest number of steps
 
     def breadth_first_search(self, allow_diagonals : bool = False):
@@ -203,7 +203,7 @@ class Maze:
         row2, col2 = pos2
         return math.sqrt((row1 - row2) ** 2 + (col1 - col2) ** 2)
 
-
+    # The idea of A* algorithm was adapted from https://www.geeksforgeeks.org/dsa/a-search-algorithm/
     # This is the main function for subtask b (looking for minimum cost path)
 
     def minimum_cost_path(self, allow_diagonals : bool = False):
@@ -487,6 +487,7 @@ class Maze:
     # We use Edmonds-Karp algorithm because it is a standard algorithm
     # for finding maximum flow in directed graphs.
     # It repeatedly searches for augmenting paths using breadth first search.
+    # Idea of Maximum flow problem was adapted from: https://www.geeksforgeeks.org/dsa/max-flow-problem-introduction/
 
     def maximum_flow(self, allow_diagonals=False):
 
@@ -723,6 +724,8 @@ class Maze:
     #
     # The algorithm only explores connected component
     # containing S, which matches task requirements.
+    #
+    # The idea of MST was adapted from: https://www.geeksforgeeks.org/dsa/what-is-minimum-spanning-tree-mst/
 
     def minimum_spanning_tree(self, allow_diagonals=False):
 
